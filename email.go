@@ -58,7 +58,7 @@ func Validate(emailAddress string) (bool, error) {
 				seeQuotation = true
 			}
 			if seeAt {
-				// TODO invalid domain part
+				return false, fmt.Errorf("%c is invalid character in domain part", item)
 			}
 			localPart = append(localPart, item)
 			previousChar = '"'

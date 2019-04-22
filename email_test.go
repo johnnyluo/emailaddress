@@ -72,6 +72,12 @@ func TestValidate(t *testing.T) {
 			expectedResult: false,
 			err:            fmt.Errorf("an email address can't have multiple '@' characters"),
 		},
+		{
+			name:           "Quote at domain",
+			input:          `test@ex"ample.com`,
+			expectedResult: false,
+			err:            fmt.Errorf(`" is invalid character in domain part`),
+		},
 	}
 	for _, item := range cases {
 		t.Run(item.name, func(st *testing.T) {
