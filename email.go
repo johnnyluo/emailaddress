@@ -3,8 +3,6 @@ package emailaddress
 import (
 	"bytes"
 	"fmt"
-
-	"github.com/pkg/errors"
 )
 
 const (
@@ -12,8 +10,8 @@ const (
 	MaxLocalPart = 64
 	// MaxDomainLength the total length of domain should be less than 255 characters
 	MaxDomainLength        = 255
-	specialLocalCharacters = ` "(),:;<>@[]`
-	validLocalPartChars    = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!#$%&'*+-/=?^_`{|}~;."
+	specialLocalCharacters = ` ",:;<>@[\]`
+	validLocalPartChars    = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!#$%&'*+-/=?^_`{|}~;.()"
 	validDomainChars       = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-"
 )
 
@@ -50,6 +48,7 @@ func Validate(emailAddress string) (bool, error) {
 		case '"':
 			if previousChar == '\\' {
 				previousChar = '"'
+				localPart = append(localPart, item)
 				continue
 			}
 
@@ -58,11 +57,16 @@ func Validate(emailAddress string) (bool, error) {
 			} else {
 				seeQuotation = true
 			}
+			if seeAt {
+				// TODO invalid domain part
+			}
+			localPart = append(localPart, item)
 			previousChar = '"'
 		case '@':
 			if seeQuotation {
 				// '@' is valid inside quoted string
 				previousChar = '@'
+				localPart = append(localPart, item)
 				continue
 			}
 			if seeAt {
@@ -82,10 +86,10 @@ func Validate(emailAddress string) (bool, error) {
 				if isSpecialLocalPartChar && !seeQuotation {
 					return false, fmt.Errorf("%c only valid inside quoted string", item)
 				}
-
 				localPart = append(localPart, item)
+			} else {
+				domain = append(domain, item)
 			}
-			domain = append(domain, item)
 			previousChar = item
 		}
 	}
@@ -111,7 +115,7 @@ func Validate(emailAddress string) (bool, error) {
 	}
 	localPartResult, err := e.validateLocalPart()
 	if nil != err {
-		return localPartResult, errors.Wrap(err, "invalid local part")
+		return localPartResult, err
 	}
 	return true, nil
 }
@@ -121,6 +125,7 @@ func (e email) validateLocalPart() (bool, error) {
 	if len(e.localPart) == 0 {
 		return false, fmt.Errorf("")
 	}
+	fmt.Println(string(e.localPart))
 	quotation := false
 	lastChar := e.localPart[len(e.localPart)-1]
 	if e.localPart[0] == '"' && lastChar == '"' {
@@ -135,9 +140,17 @@ func (e email) validateLocalPart() (bool, error) {
 		lp = e.localPart[1 : len(e.localPart)-1]
 	}
 	var previousChar rune
+	firstBackSlash := true
 	for _, item := range lp {
 		switch item {
-		case '"', '\\':
+		case '\\':
+			if firstBackSlash {
+				firstBackSlash = false
+				previousChar = '\\'
+				continue
+			}
+			firstBackSlash = true
+		case '"':
 			if previousChar != '\\' {
 				return false, fmt.Errorf("\" need to be preceded by a backslash")
 			}
