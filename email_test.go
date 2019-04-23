@@ -103,3 +103,46 @@ func TestValidate(t *testing.T) {
 		})
 	}
 }
+
+func TestParseEmail(t *testing.T) {
+	input := []string{
+		`Abc\@def@example.com`,
+		`Fred\ Bloggs@example.com`,
+		`\\Blow@example.com`,
+		`"Abc@def"@example.com`,
+		`"Fred Bloggs"@example.com`,
+		`.@test.net`,
+		`asdfasdf.@test.net`,
+	}
+	for _, item := range input {
+		_, err := parseEmailAddress(item)
+		if nil != err {
+			panic(err)
+		}
+	}
+}
+
+func TestParseLocalPart(t *testing.T) {
+	input := []string{
+		`Abc\@def`,
+		`johnny+asdf1+asdf2`,
+		`very.common`,
+		`.asdf`,
+		`asdf.`,
+		`asdf"d`,
+		`" "`,
+		`\\Blow`,
+		`"abc@def"`,
+		`"Fred Bloggs"`,
+		`Fred Bloggs`,
+		`(test`,
+		`(test)jo`,
+	}
+	for _, item := range input {
+		lp, err := parseLocalPart(item)
+		if nil != err {
+			t.Error(err)
+		}
+		fmt.Printf("%+v\n", lp)
+	}
+}
