@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 const (
@@ -23,98 +25,33 @@ var (
 
 // email represent an email address
 type email struct {
-	localPart []rune
-	domain    []rune
+	lp     *localPart
+	domain []rune
 }
 
 // localPart represent the localpart of an email address
 type localPart struct {
-	comment   string
-	localPart string
-	tags      []string
+	comment           string
+	localPartEmail    string
+	tags              []string
+	commentAtBegining bool
 }
 
 func (e email) String() string {
-	return fmt.Sprintf("%s@%s", string(e.localPart), string(e.domain))
+	return fmt.Sprintf("%s@%s", e.lp, string(e.domain))
 }
 
 // Validate the given email address
 func Validate(emailAddress string) (bool, error) {
+
+	if len(emailAddress) == 0 {
+		return false, ErrEmptyEmail
+	}
+	_, err := parseEmailAddress(emailAddress)
+	if nil != err {
+		return false, err
+	}
 	return true, nil
-	// if len(emailAddress) == 0 {
-	// 	return false, ErrEmptyEmail
-	// }
-
-	// localPart := make([]rune, 0, len(emailAddress))
-	// domain := make([]rune, 0, len(emailAddress))
-	// seeAt := false
-	// seeQuotation := false
-	// var previousChar rune
-	// for _, item := range emailAddress {
-	// 	switch item {
-	// 	case '"':
-	// 		if previousChar == '\\' {
-	// 			previousChar = '"'
-	// 			localPart = append(localPart, item)
-	// 			continue
-	// 		}
-
-	// 		if seeQuotation {
-	// 			seeQuotation = false
-	// 		} else {
-	// 			seeQuotation = true
-	// 		}
-	// 		if seeAt {
-	// 			return false, fmt.Errorf("%c is invalid character in domain part", item)
-	// 		}
-	// 		localPart = append(localPart, item)
-	// 		previousChar = '"'
-	// 	case '@':
-	// 		if seeQuotation {
-	// 			// '@' is valid inside quoted string
-	// 			previousChar = '@'
-	// 			localPart = append(localPart, item)
-	// 			continue
-	// 		}
-	// 		if seeAt {
-	// 			// means there are multiple '@' in the email address
-	// 			return false, fmt.Errorf("an email address can't have multiple '@' characters")
-	// 		}
-	// 		seeAt = true
-	// 		previousChar = '@'
-	// 	default:
-	// 		if !seeAt {
-	// 			localPart = append(localPart, item)
-	// 		} else {
-	// 			domain = append(domain, item)
-	// 		}
-	// 		previousChar = item
-	// 	}
-	// }
-	// if !seeAt {
-	// 	return false, fmt.Errorf("%s is not valid email address, the format of email addresses is local-part@domain", emailAddress)
-	// }
-	// if len(localPart) == 0 {
-	// 	return false, fmt.Errorf("email address can't start with '@'")
-	// }
-	// if len(localPart) > MaxLocalPart {
-	// 	return false, fmt.Errorf("the length of local part should be less than %d", MaxLocalPart)
-	// }
-	// if len(domain) > MaxDomainLength {
-	// 	return false, fmt.Errorf("%s is longer than %d", string(domain), MaxDomainLength)
-	// }
-	// if len(domain) == 0 {
-	// 	return false, fmt.Errorf("domain part can't be empty")
-	// }
-	// e := email{
-	// 	localPart: localPart,
-	// 	domain:    domain,
-	// }
-	// localPartResult, err := e.validateLocalPart()
-	// if nil != err {
-	// 	return localPartResult, err
-	// }
-	// return true, nil
 }
 
 // parseEmailAddress
@@ -123,7 +60,7 @@ func parseEmailAddress(input string) (*email, error) {
 		return nil, ErrEmptyEmail
 	}
 
-	localPart := make([]rune, 0, len(input))
+	lp := make([]rune, 0, len(input))
 	domain := make([]rune, 0, len(input))
 
 	seeAt := false
@@ -150,17 +87,17 @@ func parseEmailAddress(input string) (*email, error) {
 		if seeAt {
 			domain = append(domain, item)
 		} else {
-			localPart = append(localPart, item)
+			lp = append(lp, item)
 		}
 	}
 
 	if !seeAt {
 		return nil, fmt.Errorf("%s is not valid email address, the format of email addresses is local-part@domain", input)
 	}
-	if len(localPart) == 0 {
+	if len(lp) == 0 {
 		return nil, fmt.Errorf("email address can't start with '@'")
 	}
-	if len(localPart) > MaxLocalPart {
+	if len(lp) > MaxLocalPart {
 		return nil, fmt.Errorf("the length of local part should be less than %d", MaxLocalPart)
 	}
 	if len(domain) > MaxDomainLength {
@@ -169,9 +106,14 @@ func parseEmailAddress(input string) (*email, error) {
 	if len(domain) == 0 {
 		return nil, fmt.Errorf("domain part can't be empty")
 	}
-	fmt.Printf("local:%s\n", string(localPart))
-	fmt.Printf("domain:%s\n", string(domain))
-	return nil, nil
+	lpp, err := parseLocalPart(string(lp))
+	if nil != err {
+		return nil, errors.Wrap(err, "fail to parse localPart of the email address")
+	}
+	return &email{
+		lp:     lpp,
+		domain: domain,
+	}, nil
 }
 
 // parseLocalPart of email address
@@ -184,13 +126,13 @@ func parseLocalPart(lp string) (*localPart, error) {
 	if localPartLength == 1 {
 		if bytes.Contains([]byte(validLocalPartChars), []byte(lp)) {
 			return &localPart{
-				localPart: lp,
+				localPartEmail: lp,
 			}, nil
 		}
 		return nil, fmt.Errorf("%s is invalid in the local part of an email address", lp)
 	}
 
-	localp := make([]rune, localPartLength)
+	localp := make([]rune, 0, localPartLength)
 	inQuotation := false
 	var previousChar rune
 	escape := 0
@@ -248,64 +190,41 @@ func parseLocalPart(lp string) (*localPart, error) {
 	if inQuotation {
 		return nil, fmt.Errorf("\" is only valid escaped with baskslash")
 	}
-	if commentStart > 0 && commentEnd == -1 {
+	if commentStart > -1 && commentEnd == -1 {
 		return nil, fmt.Errorf("( is only valid within quoted string or escaped")
 	}
-	if commentStart == -1 && commentEnd > 0 {
+	if commentStart == -1 && commentEnd > -1 {
 		return nil, fmt.Errorf(") is only valid within quoted string or escaped")
 	}
 	lpResult := &localPart{
-		localPart: string(localp),
+		localPartEmail: string(localp),
 	}
 	if seeTag {
 		lpResult.tags = strings.Split(lp, "+")[1:]
 	}
 
 	if commentStart > -1 && commentEnd > -1 {
-		lpResult.comment = string(lp[commentStart:commentEnd])
+		lpResult.comment = string(lp[commentStart+1 : commentEnd])
+		if commentStart == 0 {
+			lpResult.commentAtBegining = true
+		}
 	}
 	return lpResult, nil
-
 }
 
-// // validateLocalPart of the email address
-// func (e email) validateLocalPart() (bool, error) {
-// 	if len(e.localPart) == 0 {
-// 		return false, fmt.Errorf("")
-// 	}
-// 	quotation := false
-// 	lastChar := e.localPart[len(e.localPart)-1]
-// 	if e.localPart[0] == '"' && lastChar == '"' {
-// 		quotation = true
-// 	}
-
-// 	lp := e.localPart
-// 	if quotation {
-// 		lp = e.localPart[1 : len(e.localPart)-1]
-// 	}
-// 	var previousChar rune
-// 	firstBackSlash := true
-// 	for _, item := range lp {
-// 		switch item {
-
-// 		case '\\':
-// 			if firstBackSlash {
-// 				firstBackSlash = false
-// 				previousChar = '\\'
-// 				continue
-// 			}
-// 			firstBackSlash = true
-// 		case '"':
-// 			if previousChar != '\\' {
-// 				return false, fmt.Errorf("\" need to be preceded by a backslash")
-// 			}
-// 		case '.':
-// 			// consective dot only valid inside quotation
-// 			if previousChar == '.' && !quotation {
-// 				return false, fmt.Errorf("consective dot only valid inside quotation")
-// 			}
-// 		}
-// 		previousChar = item
-// 	}
-// 	return true, nil
-// }
+// String convert the local part back
+func (lp localPart) String() string {
+	b := strings.Builder{}
+	b.Reset()
+	if len(lp.comment) > 0 && lp.commentAtBegining {
+		b.WriteString("(" + lp.comment + ")")
+	}
+	b.WriteString(lp.localPartEmail)
+	for _, t := range lp.tags {
+		b.WriteString("+" + t)
+	}
+	if len(lp.comment) > 0 && !lp.commentAtBegining {
+		b.WriteString("(" + lp.comment + ")")
+	}
+	return b.String()
+}

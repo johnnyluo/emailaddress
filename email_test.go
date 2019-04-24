@@ -123,26 +123,153 @@ func TestParseEmail(t *testing.T) {
 }
 
 func TestParseLocalPart(t *testing.T) {
-	input := []string{
-		`Abc\@def`,
-		`johnny+asdf1+asdf2`,
-		`very.common`,
-		`.asdf`,
-		`asdf.`,
-		`asdf"d`,
-		`" "`,
-		`\\Blow`,
-		`"abc@def"`,
-		`"Fred Bloggs"`,
-		`Fred Bloggs`,
-		`(test`,
-		`(test)jo`,
+	// input := []string{
+
+	// 	`(test)jo`,
+	// }
+	cases := []struct {
+		name           string
+		input          string
+		expectedResult *localPart
+		err            error
+	}{
+		{
+			name:  "escaped at sign",
+			input: `Abc\@def`,
+			expectedResult: &localPart{
+				localPartEmail: `Abc\@def`,
+			},
+			err: nil,
+		},
+		{
+			name:  "multiple tags",
+			input: `johnny+asdf1+asdf2`,
+			expectedResult: &localPart{
+				localPartEmail: "johnny",
+				tags:           []string{"asdf1", "asdf2"},
+			},
+			err: nil,
+		},
+		{
+			name:  "with a dot",
+			input: "very.common",
+			expectedResult: &localPart{
+				localPartEmail: "very.common",
+			},
+			err: nil,
+		},
+		{
+			name:           "start with dot",
+			input:          ".asdf",
+			expectedResult: nil,
+			err:            fmt.Errorf(". can't be the start or end of local part"),
+		},
+		{
+			name:           "end with dot",
+			input:          "asdf.",
+			expectedResult: nil,
+			err:            fmt.Errorf(". can't be the start or end of local part"),
+		},
+		{
+			name:           "with a double quote",
+			input:          `asdf"d`,
+			expectedResult: nil,
+			err:            fmt.Errorf("\" is only valid escaped with baskslash"),
+		},
+		{
+			name:  "with a escaped double quote",
+			input: `asdf\"d`,
+			expectedResult: &localPart{
+				localPartEmail: `asdf\"d`,
+			},
+			err: nil,
+		},
+		{
+			name:  "space in double quotetation",
+			input: `" "`,
+			expectedResult: &localPart{
+				localPartEmail: `" "`,
+			},
+			err: nil,
+		},
+		{
+			name:  "escaped double slash",
+			input: `\\Blow`,
+			expectedResult: &localPart{
+				localPartEmail: `\\Blow`,
+			},
+			err: nil,
+		},
+		{
+			name:  "at sign in quotation",
+			input: `"abc@def"`,
+			expectedResult: &localPart{
+				localPartEmail: `"abc@def"`,
+			},
+			err: nil,
+		},
+		{
+			name:  "space in quotation",
+			input: `"Fred Bloggs"`,
+			expectedResult: &localPart{
+				localPartEmail: `"Fred Bloggs"`,
+			},
+			err: nil,
+		},
+		{
+			name:           "space without quotation",
+			input:          `Fred Bloggs`,
+			expectedResult: nil,
+			err:            fmt.Errorf("%c is only valid in quoted string or escaped", ' '),
+		},
+		{
+			name:           "start with bracket but no end",
+			input:          "(test",
+			expectedResult: nil,
+			err:            fmt.Errorf("( is only valid within quoted string or escaped"),
+		},
+		{
+			name:  "comment at the begining",
+			input: `(test)jo`,
+			expectedResult: &localPart{
+				localPartEmail:    "jo",
+				comment:           "test",
+				commentAtBegining: true,
+			},
+			err: nil,
+		},
 	}
-	for _, item := range input {
-		lp, err := parseLocalPart(item)
-		if nil != err {
-			t.Error(err)
-		}
-		fmt.Printf("%+v\n", lp)
+	for _, c := range cases {
+		t.Run(c.name, func(st *testing.T) {
+			lp, err := parseLocalPart(c.input)
+			if nil != err && c.err == nil {
+				st.Errorf("we are not expecting error , however we got:%s", err)
+				st.FailNow()
+			}
+			if nil == err && c.err != nil {
+				st.Errorf("we are expecting err:%s, however we got nil", c.err)
+				st.FailNow()
+			}
+			if c.err != nil && err != nil {
+				if c.err.Error() != err.Error() {
+					st.Errorf("we are expecting err:%s,however we got :%s", c.err, err)
+					st.FailNow()
+				}
+			}
+			if c.expectedResult == nil && lp != nil {
+				st.Errorf("we expect result to be nil , however we got : %s", lp)
+				st.FailNow()
+			}
+			if c.expectedResult != nil && lp == nil {
+				st.Errorf("we are expecting %s, however we got nil", c.expectedResult)
+				st.FailNow()
+			}
+			if nil != lp && nil != c.expectedResult {
+				if lp.String() != c.expectedResult.String() {
+					st.Errorf("we are expecting %s, however we got :%s", c.expectedResult, lp)
+					st.FailNow()
+				}
+			}
+		})
 	}
 }
