@@ -34,7 +34,7 @@ func TestValidate(t *testing.T) {
 			name:           "consective dot email",
 			input:          `we..johnny@test.net`,
 			expectedResult: false,
-			err:            fmt.Errorf("consective dot only valid inside quotation"),
+			err:            fmt.Errorf("fail to parse localPart of the email address"),
 		},
 		{
 			name:           "consective dot email",
@@ -76,7 +76,7 @@ func TestValidate(t *testing.T) {
 			name:           "Quote at domain",
 			input:          `test@ex"ample.com`,
 			expectedResult: false,
-			err:            fmt.Errorf(`" is invalid character in domain part`),
+			err:            fmt.Errorf(`ex"ample.com is not a valid domain`),
 		},
 	}
 	for _, item := range cases {
@@ -104,29 +104,7 @@ func TestValidate(t *testing.T) {
 	}
 }
 
-func TestParseEmail(t *testing.T) {
-	input := []string{
-		`Abc\@def@example.com`,
-		`Fred\ Bloggs@example.com`,
-		`\\Blow@example.com`,
-		`"Abc@def"@example.com`,
-		`"Fred Bloggs"@example.com`,
-		`.@test.net`,
-		`asdfasdf.@test.net`,
-	}
-	for _, item := range input {
-		_, err := parseEmailAddress(item)
-		if nil != err {
-			panic(err)
-		}
-	}
-}
-
 func TestParseLocalPart(t *testing.T) {
-	// input := []string{
-
-	// 	`(test)jo`,
-	// }
 	cases := []struct {
 		name           string
 		input          string

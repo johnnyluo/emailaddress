@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 const (
@@ -15,18 +13,20 @@ const (
 	MaxDomainLength        = 255
 	specialLocalCharacters = ` ",:;<>@[\]`
 	validLocalPartChars    = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!#$%&'*+-/=?^_`{|}~;"
-	validDomainChars       = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-"
 )
 
 var (
 	// ErrEmptyEmail when the given email is actually empty
 	ErrEmptyEmail = fmt.Errorf("empty string is not valid email address")
+	byteEscape    = byte('\\')
+	// ErrInvalidLocalPart indicate the local part of email is invalid
+	ErrInvalidLocalPart = fmt.Errorf("invalid local part")
 )
 
 // email represent an email address
 type email struct {
 	lp     *localPart
-	domain []rune
+	domain []byte
 }
 
 // localPart represent the localpart of an email address
@@ -60,21 +60,20 @@ func parseEmailAddress(input string) (*email, error) {
 		return nil, ErrEmptyEmail
 	}
 
-	lp := make([]rune, 0, len(input))
-	domain := make([]rune, 0, len(input))
-
+	lp := make([]byte, 0, len(input))
+	domain := make([]byte, 0, len(input))
 	seeAt := false
 	inQuotation := false
-	var previousChar rune
-
-	for _, item := range input {
-		switch item {
+	var previousChar byte
+	for i := 0; i < len(input); i++ {
+		c := input[i]
+		switch c {
 		case '"':
-			if previousChar != '\\' {
+			if previousChar != byteEscape {
 				inQuotation = !inQuotation
 			}
 		case '@':
-			if !inQuotation && previousChar != '\\' {
+			if !inQuotation && previousChar != byteEscape {
 				if seeAt {
 					// means there are multiple '@' in the email address
 					return nil, fmt.Errorf("an email address can't have multiple '@' characters")
@@ -83,11 +82,11 @@ func parseEmailAddress(input string) (*email, error) {
 				continue
 			}
 		}
-		previousChar = item
+		previousChar = c
 		if seeAt {
-			domain = append(domain, item)
+			domain = append(domain, c)
 		} else {
-			lp = append(lp, item)
+			lp = append(lp, c)
 		}
 	}
 
@@ -108,8 +107,12 @@ func parseEmailAddress(input string) (*email, error) {
 	}
 	lpp, err := parseLocalPart(string(lp))
 	if nil != err {
-		return nil, errors.Wrap(err, "fail to parse localPart of the email address")
+		return nil, fmt.Errorf("fail to parse localPart of the email address")
 	}
+	if !IsDomainName(string(domain)) {
+		return nil, fmt.Errorf("%s is not a valid domain", string(domain))
+	}
+
 	return &email{
 		lp:     lpp,
 		domain: domain,
@@ -132,59 +135,59 @@ func parseLocalPart(lp string) (*localPart, error) {
 		return nil, fmt.Errorf("%s is invalid in the local part of an email address", lp)
 	}
 
-	localp := make([]rune, 0, localPartLength)
+	localp := make([]byte, 0, localPartLength)
 	inQuotation := false
-	var previousChar rune
+	var previousChar byte
 	escape := 0
 	seeTag := false
 	commentStart := -1
 	commentEnd := -1
-
-	for idx, item := range lp {
-		switch item {
+	for idx := 0; idx < len(lp); idx++ {
+		c := lp[idx]
+		switch c {
 		case '"':
-			if previousChar != '\\' {
+			if previousChar != byteEscape {
 				inQuotation = !inQuotation
 			}
 		case '+':
-			if previousChar != '\\' {
+			if previousChar != byteEscape {
 				seeTag = true
 			}
 		case '.':
 			if idx == 0 || idx == (localPartLength-1) {
-				return nil, fmt.Errorf("%c can't be the start or end of local part", item)
+				return nil, fmt.Errorf("%c can't be the start or end of local part", c)
 			}
 			if previousChar == '.' && !inQuotation {
 				return nil, fmt.Errorf("consective dot is only valid in quotation")
 			}
-		case '\\':
+		case byteEscape:
 			escape++
 		case ',', ':', ';', '<', '>', '@', '[', ']', ' ':
-			if !inQuotation && previousChar != '\\' {
-				return nil, fmt.Errorf("%c is only valid in quoted string or escaped", item)
+			if !inQuotation && previousChar != byteEscape {
+				return nil, fmt.Errorf("%c is only valid in quoted string or escaped", c)
 			}
 		case '(':
-			if !inQuotation && previousChar != '\\' {
+			if !inQuotation && previousChar != byteEscape {
 				commentStart = idx
 			}
 		case ')':
-			if !inQuotation && previousChar != '\\' {
+			if !inQuotation && previousChar != byteEscape {
 				commentEnd = idx
 			}
 		default:
-			if previousChar == '\\' && !inQuotation {
+			if previousChar == byteEscape && !inQuotation {
 				return nil, fmt.Errorf("\\ is only valid in quoted string or escaped")
 			}
 		}
 
 		if escape > 0 && escape%2 == 0 {
-			previousChar = -1
+			previousChar = 0
 		} else {
-			previousChar = item
+			previousChar = c
 		}
 		if !seeTag && (commentStart < 0 || (commentEnd > 0 && idx > commentEnd)) {
 			// legitimate localpart
-			localp = append(localp, item)
+			localp = append(localp, c)
 		}
 	}
 	if inQuotation {
