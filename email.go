@@ -29,6 +29,10 @@ type email struct {
 	domain []byte
 }
 
+func (e email) String() string {
+	return fmt.Sprintf("%s@%s", e.lp, string(e.domain))
+}
+
 // localPart represent the localpart of an email address
 type localPart struct {
 	comment           string
@@ -37,8 +41,21 @@ type localPart struct {
 	commentAtBegining bool
 }
 
-func (e email) String() string {
-	return fmt.Sprintf("%s@%s", e.lp, string(e.domain))
+// String convert the local part back
+func (lp localPart) String() string {
+	b := strings.Builder{}
+	b.Reset()
+	if len(lp.comment) > 0 && lp.commentAtBegining {
+		b.WriteString("(" + lp.comment + ")")
+	}
+	b.WriteString(lp.localPartEmail)
+	for _, t := range lp.tags {
+		b.WriteString("+" + t)
+	}
+	if len(lp.comment) > 0 && !lp.commentAtBegining {
+		b.WriteString("(" + lp.comment + ")")
+	}
+	return b.String()
 }
 
 // Validate the given email address
@@ -215,19 +232,22 @@ func parseLocalPart(lp string) (*localPart, error) {
 	return lpResult, nil
 }
 
-// String convert the local part back
-func (lp localPart) String() string {
-	b := strings.Builder{}
-	b.Reset()
-	if len(lp.comment) > 0 && lp.commentAtBegining {
-		b.WriteString("(" + lp.comment + ")")
+// Equals will parse the given email addresses , and then compare it.
+// if first or second are not legitimate email address, this function will return false
+func Equals(first string, second string) bool {
+	eFirst, err := parseEmailAddress(first)
+	if nil != err {
+		return false
 	}
-	b.WriteString(lp.localPartEmail)
-	for _, t := range lp.tags {
-		b.WriteString("+" + t)
+	eSec, err := parseEmailAddress(second)
+	if nil != err {
+		return false
 	}
-	if len(lp.comment) > 0 && !lp.commentAtBegining {
-		b.WriteString("(" + lp.comment + ")")
+	if !bytes.EqualFold(eFirst.domain, eSec.domain) {
+		return false
 	}
-	return b.String()
+	if !strings.EqualFold(eFirst.lp.localPartEmail, eSec.lp.localPartEmail) {
+		return false
+	}
+	return true
 }

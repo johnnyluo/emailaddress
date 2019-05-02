@@ -78,6 +78,30 @@ func TestValidate(t *testing.T) {
 			expectedResult: false,
 			err:            fmt.Errorf(`ex"ample.com is not a valid domain`),
 		},
+		{
+			name:           "email start with @",
+			input:          `@example.com`,
+			expectedResult: false,
+			err:            fmt.Errorf("email address can't start with '@'"),
+		},
+		{
+			name:           "email end with @",
+			input:          `test@`,
+			expectedResult: false,
+			err:            fmt.Errorf("domain part can't be empty"),
+		},
+		{
+			name:           "exceed maximum domain length",
+			input:          `test@abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz`,
+			expectedResult: false,
+			err:            fmt.Errorf("%s is longer than %d", "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz", MaxDomainLength),
+		},
+		{
+			name:           "exceed maximum local part",
+			input:          `abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz@example.com`,
+			expectedResult: false,
+			err:            fmt.Errorf("the length of local part should be less than %d", MaxLocalPart),
+		},
 	}
 	for _, item := range cases {
 		t.Run(item.name, func(st *testing.T) {
@@ -111,6 +135,12 @@ func TestParseLocalPart(t *testing.T) {
 		expectedResult *localPart
 		err            error
 	}{
+		{
+			name:           "empty local part",
+			input:          ``,
+			expectedResult: nil,
+			err:            fmt.Errorf("empty local part"),
+		},
 		{
 			name:  "escaped at sign",
 			input: `Abc\@def`,
@@ -216,6 +246,26 @@ func TestParseLocalPart(t *testing.T) {
 			},
 			err: nil,
 		},
+		{
+			name:  "a",
+			input: `a`,
+			expectedResult: &localPart{
+				localPartEmail: "a",
+			},
+			err: nil,
+		},
+		{
+			name:           ")",
+			input:          `)`,
+			expectedResult: nil,
+			err:            fmt.Errorf("%s is invalid in the local part of an email address", ")"),
+		},
+		{
+			name:           "abc)d",
+			input:          `abc)d`,
+			expectedResult: nil,
+			err:            fmt.Errorf(") is only valid within quoted string or escaped"),
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(st *testing.T) {
@@ -247,6 +297,30 @@ func TestParseLocalPart(t *testing.T) {
 					st.Errorf("we are expecting %s, however we got :%s", c.expectedResult, lp)
 					st.FailNow()
 				}
+			}
+		})
+	}
+}
+
+func TestEquals(t *testing.T) {
+	cases := []struct {
+		name        string
+		inputFirst  string
+		inputSecond string
+		expected    bool
+	}{
+		{
+			name:        "empty vs none empty",
+			inputFirst:  ``,
+			inputSecond: ``,
+			expected:    false,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(st *testing.T) {
+			result := Equals(c.inputFirst, c.inputSecond)
+			if c.expected != result {
+				st.Errorf("we expect %t however we got %t", c.expected, result)
 			}
 		})
 	}
