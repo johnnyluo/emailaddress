@@ -102,6 +102,12 @@ func TestValidate(t *testing.T) {
 			expectedResult: false,
 			err:            fmt.Errorf("the length of local part should be less than %d", MaxLocalPart),
 		},
+		{
+			name:           "email with escape",
+			input:          `te\st@test.net`,
+			expectedResult: false,
+			err:            fmt.Errorf("fail to parse localPart of the email address"),
+		},
 	}
 	for _, item := range cases {
 		t.Run(item.name, func(st *testing.T) {
@@ -310,10 +316,52 @@ func TestEquals(t *testing.T) {
 		expected    bool
 	}{
 		{
-			name:        "empty vs none empty",
+			name:        "empty vs empty",
 			inputFirst:  ``,
 			inputSecond: ``,
 			expected:    false,
+		},
+		{
+			name:        "empty vs none empty",
+			inputFirst:  ``,
+			inputSecond: `test@test.net`,
+			expected:    false,
+		},
+		{
+			name:        "comment vs without comments",
+			inputFirst:  `test(explaintest)@test.net`,
+			inputSecond: `test@test.net`,
+			expected:    true,
+		},
+		{
+			name:        "comment vs comments",
+			inputFirst:  `test(explaintest)@test.net`,
+			inputSecond: `(blalala)test@test.net`,
+			expected:    true,
+		},
+		{
+			name:        "tag",
+			inputFirst:  `test(explaintest)@test.net`,
+			inputSecond: `test+hello@test.net`,
+			expected:    true,
+		},
+		{
+			name:        "tag vs no tag",
+			inputFirst:  `test@test.net`,
+			inputSecond: `test+hello@test.net`,
+			expected:    true,
+		},
+		{
+			name:        "mixcase",
+			inputFirst:  `tesT@test.net`,
+			inputSecond: `TesT+hello@test.net`,
+			expected:    true,
+		},
+		{
+			name:        "tag vs multiple tags",
+			inputFirst:  `test+hello+hello1@test.net`,
+			inputSecond: `test+hello@test.net`,
+			expected:    true,
 		},
 	}
 	for _, c := range cases {
