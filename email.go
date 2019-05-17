@@ -1,4 +1,4 @@
-package emailaddress
+package emailaddress // import github.com/johnnyluo/emailaddress
 
 import (
 	"bytes"

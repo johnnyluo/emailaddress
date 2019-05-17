@@ -53,6 +53,11 @@ func TestIsDomainName(t *testing.T) {
 			input:          "t1est.net",
 			expectedResult: true,
 		},
+		{
+			name:           "long - part",
+			input:          "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzasdf.net",
+			expectedResult: false,
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(st *testing.T) {

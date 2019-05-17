@@ -2,6 +2,7 @@ package emailaddress
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 )
 
@@ -107,6 +108,30 @@ func TestValidate(t *testing.T) {
 			input:          `te\st@test.net`,
 			expectedResult: false,
 			err:            fmt.Errorf("fail to parse localPart of the email address"),
+		},
+		{
+			name:           "customer/department=shipping@example.com",
+			input:          `customer/department=shipping@example.com`,
+			expectedResult: true,
+			err:            nil,
+		},
+		{
+			name:           "$A12345@example.com",
+			input:          "$A12345@example.com",
+			expectedResult: true,
+			err:            nil,
+		},
+		{
+			name:           "!def!xyz%abc@example.com",
+			input:          "!def!xyz%abc@example.com",
+			expectedResult: true,
+			err:            nil,
+		},
+		{
+			name:           "_somename@example.com",
+			input:          "_somename@example.com",
+			expectedResult: true,
+			err:            nil,
 		},
 	}
 	for _, item := range cases {
@@ -371,5 +396,15 @@ func TestEquals(t *testing.T) {
 				st.Errorf("we expect %t however we got %t", c.expected, result)
 			}
 		})
+	}
+}
+
+func BenchmarkEmailAddress(b *testing.B) {
+	re := regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
+	input := []string{"abcd@gmail.yahoo", "test(blabal)@test.net"}
+	for _, item := range input {
+		if !re.MatchString(item) {
+			b.Fail()
+		}
 	}
 }
