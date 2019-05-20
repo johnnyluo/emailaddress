@@ -1,5 +1,10 @@
 package emailaddress
 
+import (
+	"fmt"
+	"net"
+)
+
 // IsDomainName checks if a string is a presentation-format domain name
 // (currently restricted to hostname-compatible "preferred name" LDH labels and
 // SRV-like "underscore labels"; see golang.org/issue/12421).
@@ -56,4 +61,20 @@ func IsDomainName(s string) bool {
 	}
 
 	return nonNumeric
+}
+
+// HasDomainMX will query the DNS on the given domain to find out whether there is a MX for the domain
+// if the given domain has no MX record, the email address that has the domain , is not likely to be legitimate
+func HasDomainMX(domain string) bool {
+	mxes, err := net.LookupMX(domain)
+	if nil != err {
+		return false
+	}
+	if len(mxes) == 0 {
+		return false
+	}
+	for _, item := range mxes {
+		fmt.Println(item)
+	}
+	return true
 }

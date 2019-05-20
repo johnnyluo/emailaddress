@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	exp, err := ioutil.ReadFile("../../data/regex_expression.dat")
+	exp, err := ioutil.ReadFile("../../data/w3c.dat")
 	if nil != err {
 		panic(err)
 	}
