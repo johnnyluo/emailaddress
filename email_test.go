@@ -402,11 +402,13 @@ func TestEquals(t *testing.T) {
 func benchEmailAddress(input string, expectedResult bool, b *testing.B) {
 	re := regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 	for i := 0; i < b.N; i++ {
-		re.MatchString(input)
+		if expectedResult != re.MatchString(input) {
+			b.Fail()
+		}
 	}
 }
 
-func benchEmailAddressPkg(input string,expectedResult bool, b *testing.B) {
+func benchEmailAddressPkg(input string, expectedResult bool, b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		result, err := Validate(input)
 		if nil != err {
@@ -417,7 +419,13 @@ func benchEmailAddressPkg(input string,expectedResult bool, b *testing.B) {
 		}
 	}
 }
-func BenchmarkEmailAddresspkg_testattestdotnet(b *testing.B){benchEmailAddressPkg("test@test.net",true, b)}
+func BenchmarkEmailAddresspkg_testattestdotnet(b *testing.B) {
+	benchEmailAddressPkg("test@test.net", true, b)
+}
 func BenchmarkEmailAddress_testattestdotnet(b *testing.B) { benchEmailAddress("test@test.net", true, b) }
-func BenchmarkEmailAddress_testattestdotnetWithSpecialChar(b *testing.B) { benchEmailAddress("\"tesd>;,t\"@test.net", true, b) }
-func BenchmarkEmailAddressPkg_testattestdotnetWithSpecialChar(b *testing.B) { benchEmailAddressPkg("\"tesd>;,t\"@test.net", true, b) }
+func BenchmarkEmailAddress_testattestdotnetWithSpecialChar(b *testing.B) {
+	benchEmailAddress("te#!sdt@test.net", true, b)
+}
+func BenchmarkEmailAddressPkg_testattestdotnetWithSpecialChar(b *testing.B) {
+	benchEmailAddressPkg("te#!sdt@test.net", true, b)
+}
