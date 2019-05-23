@@ -400,6 +400,7 @@ func TestEquals(t *testing.T) {
 }
 
 func benchEmailAddress(input string, expectedResult bool, b *testing.B) {
+	b.ReportAllocs()
 	re := regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 	for i := 0; i < b.N; i++ {
 		if expectedResult != re.MatchString(input) {
@@ -409,6 +410,7 @@ func benchEmailAddress(input string, expectedResult bool, b *testing.B) {
 }
 
 func benchEmailAddressPkg(input string, expectedResult bool, b *testing.B) {
+	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		result, err := Validate(input)
 		if nil != err {

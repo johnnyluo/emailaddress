@@ -26,7 +26,7 @@ var (
 // email represent an email address
 type email struct {
 	lp     *localPart
-	domain []byte
+	domain string
 }
 
 func (e email) String() string {
@@ -77,8 +77,7 @@ func parseEmailAddress(input string) (*email, error) {
 		return nil, ErrEmptyEmail
 	}
 
-	lp := make([]byte, 0, len(input))
-	domain := make([]byte, 0, len(input))
+	atLoc := -1
 	seeAt := false
 	inQuotation := false
 	var previousChar byte
@@ -96,43 +95,41 @@ func parseEmailAddress(input string) (*email, error) {
 					return nil, fmt.Errorf("an email address can't have multiple '@' characters")
 				}
 				seeAt = true
+				atLoc = i
 				continue
 			}
 		}
 		previousChar = c
-		if seeAt {
-			domain = append(domain, c)
-		} else {
-			lp = append(lp, c)
-		}
 	}
 
 	if !seeAt {
 		return nil, fmt.Errorf("%s is not valid email address, the format of email addresses is local-part@domain", input)
 	}
-	if len(lp) == 0 {
+
+	lenDomain := len(input) - atLoc - 1
+	if atLoc == 0 {
 		return nil, fmt.Errorf("email address can't start with '@'")
 	}
-	if len(lp) > MaxLocalPart {
+	if atLoc > MaxLocalPart {
 		return nil, fmt.Errorf("the length of local part should be less than %d", MaxLocalPart)
 	}
-	if len(domain) > MaxDomainLength {
-		return nil, fmt.Errorf("%s is longer than %d", string(domain), MaxDomainLength)
+	if lenDomain > MaxDomainLength {
+		return nil, fmt.Errorf("%s is longer than %d", string(input[atLoc+1:]), MaxDomainLength)
 	}
-	if len(domain) == 0 {
+	if lenDomain == 0 {
 		return nil, fmt.Errorf("domain part can't be empty")
 	}
-	lpp, err := parseLocalPart(string(lp))
+	lpp, err := parseLocalPart(string(input[:atLoc]))
 	if nil != err {
 		return nil, fmt.Errorf("fail to parse localPart of the email address")
 	}
-	if !IsDomainName(string(domain)) {
-		return nil, fmt.Errorf("%s is not a valid domain", string(domain))
+	if !IsDomainName(string(input[atLoc+1:])) {
+		return nil, fmt.Errorf("%s is not a valid domain", string(input[atLoc+1:]))
 	}
 
 	return &email{
 		lp:     lpp,
-		domain: domain,
+		domain: input[atLoc+1:],
 	}, nil
 }
 
@@ -243,7 +240,7 @@ func Equals(first string, second string) bool {
 	if nil != err {
 		return false
 	}
-	if !bytes.EqualFold(eFirst.domain, eSec.domain) {
+	if !strings.EqualFold(eFirst.domain, eSec.domain) {
 		return false
 	}
 	if !strings.EqualFold(eFirst.lp.localPartEmail, eSec.lp.localPartEmail) {
