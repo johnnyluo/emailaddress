@@ -149,13 +149,15 @@ func parseLocalPart(lp string) (*localPart, error) {
 		return nil, fmt.Errorf("%s is invalid in the local part of an email address", lp)
 	}
 
-	localp := make([]byte, 0, localPartLength)
 	inQuotation := false
 	var previousChar byte
 	escape := 0
 	seeTag := false
 	commentStart := -1
 	commentEnd := -1
+	start := 0
+	end := localPartLength
+
 	for idx := 0; idx < len(lp); idx++ {
 		c := lp[idx]
 		switch c {
@@ -165,6 +167,9 @@ func parseLocalPart(lp string) (*localPart, error) {
 			}
 		case '+':
 			if previousChar != byteEscape {
+				if !seeTag {
+					end = idx
+				}
 				seeTag = true
 			}
 		case '.':
@@ -199,11 +204,8 @@ func parseLocalPart(lp string) (*localPart, error) {
 		} else {
 			previousChar = c
 		}
-		if !seeTag && (commentStart < 0 || (commentEnd > 0 && idx > commentEnd)) {
-			// legitimate localpart
-			localp = append(localp, c)
-		}
 	}
+
 	if inQuotation {
 		return nil, fmt.Errorf("\" is only valid escaped with baskslash")
 	}
@@ -213,8 +215,15 @@ func parseLocalPart(lp string) (*localPart, error) {
 	if commentStart == -1 && commentEnd > -1 {
 		return nil, fmt.Errorf(") is only valid within quoted string or escaped")
 	}
+	if commentStart == 0 {
+		start = commentEnd + 1
+	}
+	if commentStart > 0 {
+		end = commentStart
+	}
+
 	lpResult := &localPart{
-		localPartEmail: string(localp),
+		localPartEmail: lp[start:end],
 	}
 	if seeTag {
 		lpResult.tags = strings.Split(lp, "+")[1:]
