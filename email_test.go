@@ -133,6 +133,48 @@ func TestValidate(t *testing.T) {
 			expectedResult: true,
 			err:            nil,
 		},
+		{
+			name:           "multiple dot and tag",
+			input:          "disposable.style.email.with+symbol@example.com",
+			expectedResult: true,
+			err:            nil,
+		},
+		{
+			name:           "simple and legit",
+			input:          "simple@example.com",
+			expectedResult: true,
+			err:            nil,
+		},
+		{
+			name:           "multiple hyphen",
+			input:          "other.email-with-hyphen@example.com",
+			expectedResult: true,
+			err:            nil,
+		},
+		{
+			name:           "hyphens",
+			input:          "fully-qualified-domain@example.com",
+			expectedResult: true,
+			err:            nil,
+		},
+		{
+			name:           "two tags",
+			input:          "user.name+tag+sorting@example.com",
+			expectedResult: true,
+			err:            nil,
+		},
+		{
+			name:           "single letter on local part",
+			input:          "x@example.com",
+			expectedResult: true,
+			err:            nil,
+		},
+		{
+			name:           "hyphen in domain",
+			input:          "example-indeed@strange-example.com",
+			expectedResult: true,
+			err:            nil,
+		},
 	}
 	for _, item := range cases {
 		t.Run(item.name, func(st *testing.T) {
@@ -429,55 +471,59 @@ func BenchmarkEmailAddress_testattestdotnetWithSpecialChar(b *testing.B) {
 	benchEmailAddress("te#!sdt@test.net", true, b)
 }
 
-
-func BenchmarkValidateEmailAddress(b *testing.B){
-	inputs := []struct{
-		name string
-		input string
+func BenchmarkValidateEmailAddress(b *testing.B) {
+	inputs := []struct {
+		name           string
+		input          string
 		expectedResult bool
 	}{
 		{
-			name:"With Comment At the begining",
-			input:"(hello)test@test.net",
-			expectedResult:true,
-		},
-		{
-			name:"With Comment At the end",
-			input:"test(hello)@test.net",
-			expectedResult:true,
-		},
-		{
-			name:"With One Tag",
-			input:"test+test1@test.net",
+			name:           "With Comment At the begining",
+			input:          "(hello)test@test.net",
 			expectedResult: true,
 		},
 		{
-			name:"Email with special char",
-			input:"te#!sdt@test.net",
+			name:           "With Comment At the end",
+			input:          "test(hello)@test.net",
 			expectedResult: true,
 		},
 		{
-			name:"test@test.net",
-			input:"test@test.net",
+			name:           "With One Tag",
+			input:          "test+test1@test.net",
+			expectedResult: true,
+		},
+		{
+			name:           "Email with special char",
+			input:          "te#!sdt@test.net",
+			expectedResult: true,
+		},
+		{
+			name:           "test@test.net",
+			input:          "test@test.net",
+			expectedResult: true,
+		},
+		{
+			name:           "email with quote",
+			input:          "\"display\"@helloworld.net",
 			expectedResult: true,
 		},
 	}
-	for _,item := range inputs {
-		b.Run(item.name, func(sb *testing.B){
+	for _, item := range inputs {
+		b.Run(item.name, func(sb *testing.B) {
 			benchEmailAddressPkg(item.input, item.expectedResult, sb)
 		})
 	}
 }
 
-func ExampleValidate(){
+func ExampleValidate() {
 	email := "test@test.net"
-	b,err := Validate(email)	
+	b, err := Validate(email)
 	if nil != err {
 		panic(err)
 	}
 	if b {
-		fmt.Printf("%s is a legitimate email address",email)
+		fmt.Printf("%s is a legitimate email address", email)
 	} else {
-		fmt.Printf("%s is not a legitimate email",email)
+		fmt.Printf("%s is not a legitimate email", email)
 	}
 }
