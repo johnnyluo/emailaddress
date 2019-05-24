@@ -431,3 +431,16 @@ func BenchmarkEmailAddress_testattestdotnetWithSpecialChar(b *testing.B) {
 func BenchmarkEmailAddressPkg_testattestdotnetWithSpecialChar(b *testing.B) {
 	benchEmailAddressPkg("te#!sdt@test.net", true, b)
 }
+
+func ExampleValidate(){
+	email := "test@test.net"
+	b,err := Validate(email)	
+	if nil != err {
+		panic(err)
+	}
+	if b {
+		fmt.Printf("%s is a legitimate email address",email)
+	} else {
+		fmt.Printf("%s is not a legitimate email",email)
+	}
+}
