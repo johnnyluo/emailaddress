@@ -428,8 +428,45 @@ func BenchmarkEmailAddress_testattestdotnet(b *testing.B) { benchEmailAddress("t
 func BenchmarkEmailAddress_testattestdotnetWithSpecialChar(b *testing.B) {
 	benchEmailAddress("te#!sdt@test.net", true, b)
 }
-func BenchmarkEmailAddressPkg_testattestdotnetWithSpecialChar(b *testing.B) {
-	benchEmailAddressPkg("te#!sdt@test.net", true, b)
+
+
+func BenchmarkValidateEmailAddress(b *testing.B){
+	inputs := []struct{
+		name string
+		input string
+		expectedResult bool
+	}{
+		{
+			name:"With Comment At the begining",
+			input:"(hello)test@test.net",
+			expectedResult:true,
+		},
+		{
+			name:"With Comment At the end",
+			input:"test(hello)@test.net",
+			expectedResult:true,
+		},
+		{
+			name:"With One Tag",
+			input:"test+test1@test.net",
+			expectedResult: true,
+		},
+		{
+			name:"Email with special char",
+			input:"te#!sdt@test.net",
+			expectedResult: true,
+		},
+		{
+			name:"test@test.net",
+			input:"test@test.net",
+			expectedResult: true,
+		},
+	}
+	for _,item := range inputs {
+		b.Run(item.name, func(sb *testing.B){
+			benchEmailAddressPkg(item.input, item.expectedResult, sb)
+		})
+	}
 }
 
 func ExampleValidate(){
