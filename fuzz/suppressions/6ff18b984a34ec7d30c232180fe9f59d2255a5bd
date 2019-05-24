@@ -1,0 +1,7 @@
+panic: runtime error: slice bounds out of range
+github.com/johnnyluo/emailaddress.parseLocalPart
+github.com/johnnyluo/emailaddress.parseEmailAddress
+github.com/johnnyluo/emailaddress.Validate
+github.com/johnnyluo/emailaddress.Fuzz
+go-fuzz-dep.Main
+main.main

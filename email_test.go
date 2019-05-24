@@ -424,10 +424,13 @@ func benchEmailAddressPkg(input string, expectedResult bool, b *testing.B) {
 func BenchmarkEmailAddresspkg_testattestdotnet(b *testing.B) {
 	benchEmailAddressPkg("test@test.net", true, b)
 }
-func BenchmarkEmailAddress_testattestdotnet(b *testing.B) { benchEmailAddress("test@test.net", true, b) }
+func BenchmarkEmailAddress_testattestdotnet(b *testing.B) { 
+	benchEmailAddress("test@test.net", true, b) 
+}
 func BenchmarkEmailAddress_testattestdotnetWithSpecialChar(b *testing.B) {
 	benchEmailAddress("te#!sdt@test.net", true, b)
 }
 func BenchmarkEmailAddressPkg_testattestdotnetWithSpecialChar(b *testing.B) {
 	benchEmailAddressPkg("te#!sdt@test.net", true, b)
 }
+

@@ -1,0 +1,16 @@
+panic: runtime error: slice bounds out of range
+
+goroutine 1 [running]:
+github.com/johnnyluo/emailaddress.parseLocalPart(0xc00000a0b8, 0x2, 0xc0000a9d28, 0xc0000a9d48, 0x44475f)
+	C:/johnny/gowork/src/github.com/johnnyluo/emailaddress/email.go:233 +0x174c
+github.com/johnnyluo/emailaddress.parseEmailAddress(0xc00000a0b8, 0x4, 0x2090000, 0x4, 0xc00000a0b8)
+	C:/johnny/gowork/src/github.com/johnnyluo/emailaddress/email.go:122 +0x64a
+github.com/johnnyluo/emailaddress.Validate(0xc00000a0b8, 0x4, 0x4, 0x200000, 0xc00000a0b8)
+	C:/johnny/gowork/src/github.com/johnnyluo/emailaddress/email.go:67 +0x8f
+github.com/johnnyluo/emailaddress.Fuzz(0x2090000, 0x4, 0x200000, 0x3)
+	C:/johnny/gowork/src/github.com/johnnyluo/emailaddress/email.go:263 +0x83
+go-fuzz-dep.Main(0xc0000a9f80, 0x1, 0x1)
+	C:/Users/johnnyl/AppData/Local/Temp/go-fuzz-build703244927/goroot/src/go-fuzz-dep/main.go:36 +0x1bd
+main.main()
+	C:/Users/johnnyl/AppData/Local/Temp/go-fuzz-build703244927/gopath/src/github.com/johnnyluo/emailaddress/go.fuzz.main/main.go:15 +0x59
+exit status 2

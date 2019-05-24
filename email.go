@@ -257,3 +257,15 @@ func Equals(first string, second string) bool {
 	}
 	return true
 }
+
+// Fuzz go fuzz implementation
+func Fuzz(data []byte) int {
+	isValidEmail, err := Validate(string(data))
+	if nil != err {
+		if isValidEmail {
+			panic("result should be invalid email when there is error")
+		}
+		return 0
+	}
+	return 1
+}
