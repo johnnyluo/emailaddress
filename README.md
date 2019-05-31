@@ -1,6 +1,6 @@
 # emailaddress : validate email address based on RFC-5322
 
-## Overview [![GoDoc](https://godoc.org/github.com/johnnyluo/emailaddress?status.svg)](https://godoc.org/github.com/johnnyluo/emailaddress) [![Build Status](https://travis-ci.com/johnnyluo/emailaddress.svg?branch=master)](https://travis-ci.com/johnnyluo/emailaddress)
+## Overview [![GoDoc](https://godoc.org/github.com/johnnyluo/emailaddress?status.svg)](https://godoc.org/github.com/johnnyluo/emailaddress) [![Build Status](https://travis-ci.com/johnnyluo/emailaddress.svg?branch=master)](https://travis-ci.com/johnnyluo/emailaddress) [![codecov](https://codecov.io/gh/johnnyluo/emailaddress/branch/master/graph/badge.svg)](https://codecov.io/gh/johnnyluo/emailaddress)
 
 Email address is defined in [RFC-5322](https://tools.ietf.org/html/rfc5322#section-3.4.1) , a more easy to read version can be find on [wikipedia](https://en.wikipedia.org/wiki/Email_address). This package provide the function to validate an email address against the standard.
 
