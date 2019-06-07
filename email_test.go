@@ -2,6 +2,7 @@ package emailaddress
 
 import (
 	"fmt"
+	"reflect"
 	"regexp"
 	"testing"
 )
@@ -227,7 +228,18 @@ func TestParseLocalPart(t *testing.T) {
 			input: `johnny+asdf1+asdf2`,
 			expectedResult: &localPart{
 				localPartEmail: "johnny",
-				tags:           []string{"asdf1", "asdf2"},
+				tags: []tag{
+					{
+						emailTags: "+asdf1+asdf2",
+						start:     1,
+						end:       6,
+					},
+					{
+						emailTags: "+asdf1+asdf2",
+						start:     7,
+						end:       12,
+					},
+				},
 			},
 			err: nil,
 		},
@@ -339,6 +351,12 @@ func TestParseLocalPart(t *testing.T) {
 			expectedResult: nil,
 			err:            fmt.Errorf(") is only valid within quoted string or escaped"),
 		},
+		{
+			name:           "localpart with )(",
+			input:          "test)wel(come",
+			expectedResult: nil,
+			err:            fmt.Errorf("invalid email address"),
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(st *testing.T) {
@@ -430,6 +448,30 @@ func TestEquals(t *testing.T) {
 			inputSecond: `test+hello@test.net`,
 			expected:    true,
 		},
+		{
+			name:        "first email is invalid",
+			inputFirst:  "invalid*@test@test.net",
+			inputSecond: "test@test.net",
+			expected:    false,
+		},
+		{
+			name:        "second email is invalid",
+			inputFirst:  "test@test.net",
+			inputSecond: "invalid*@test@test.net",
+			expected:    false,
+		},
+		{
+			name:        "different domain",
+			inputFirst:  "test@test.net",
+			inputSecond: "test@gmail.com",
+			expected:    false,
+		},
+		{
+			name:        "differnt local part",
+			inputFirst:  "test@test.net",
+			inputSecond: "test111@test.net",
+			expected:    false,
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(st *testing.T) {
@@ -516,14 +558,90 @@ func BenchmarkValidateEmailAddress(b *testing.B) {
 }
 
 func ExampleValidate() {
-	email := "test@test.net"
-	b, err := Validate(email)
+	e := "test@test.net"
+	b, err := Validate(e)
 	if nil != err {
 		panic(err)
 	}
 	if b {
-		fmt.Printf("%s is a legitimate email address", email)
+		fmt.Printf("%s is a legitimate email address", e)
 	} else {
-		fmt.Printf("%s is not a legitimate email", email)
+		fmt.Printf("%s is not a legitimate email", e)
+	}
+}
+
+// TestGetTags unit tests
+func TestGetTags(t *testing.T) {
+	testCases := []struct {
+		name           string
+		input          string
+		expectedResult []tag
+	}{
+		{
+			name:           "empty tags",
+			input:          "",
+			expectedResult: nil,
+		},
+		{
+			name:           "only plus",
+			input:          "+",
+			expectedResult: nil,
+		},
+		{
+			name:  "start with plus",
+			input: "+test+test1",
+			expectedResult: []tag{
+				{
+					emailTags: "+test+test1",
+					start:     1,
+					end:       5,
+				},
+				{
+					emailTags: "+test+test1",
+					start:     6,
+					end:       11,
+				},
+			},
+		},
+		{
+			name:  "end with plus",
+			input: "test+test1+",
+			expectedResult: []tag{
+				{
+					emailTags: "test+test1+",
+					start:     0,
+					end:       4,
+				},
+				{
+					emailTags: "test+test1+",
+					start:     5,
+					end:       10,
+				},
+			},
+		},
+		{
+			name:  "only one tag",
+			input: "+test",
+			expectedResult: []tag{
+				{
+					emailTags: "+test",
+					start:     1,
+					end:       5,
+				},
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(st *testing.T) {
+			tags := getTags(tc.input)
+			if tc.expectedResult == nil && tags != nil {
+				st.Errorf("we are not expecting anything but we got : %v", tags)
+				return
+			}
+			if !reflect.DeepEqual(tags, tc.expectedResult) {
+				st.Errorf("we are expecting %v , however we got : %v", tc.expectedResult, tags)
+				return
+			}
+		})
 	}
 }

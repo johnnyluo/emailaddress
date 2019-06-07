@@ -23,6 +23,22 @@ var (
 	ErrInvalidLocalPart = fmt.Errorf("invalid local part")
 )
 
+// tag represent tag in email local part
+type tag struct {
+	emailTags string
+	start     int
+	end       int
+}
+
+// String stringer implementation
+func (t tag) String() string {
+	totalLen := len(t.emailTags)
+	if t.end == 0 || len(t.emailTags) == 0 || t.start > totalLen || t.end > totalLen || t.end < t.start {
+		return ""
+	}
+	return t.emailTags[t.start:t.end]
+}
+
 // email represent an email address
 type email struct {
 	lp     *localPart
@@ -37,7 +53,7 @@ func (e email) String() string {
 type localPart struct {
 	comment           string
 	localPartEmail    string
-	tags              []string
+	tags              []tag
 	commentAtBegining bool
 }
 
@@ -50,7 +66,7 @@ func (lp localPart) String() string {
 	}
 	b.WriteString(lp.localPartEmail)
 	for _, t := range lp.tags {
-		b.WriteString("+" + t)
+		b.WriteString("+" + t.String())
 	}
 	if len(lp.comment) > 0 && !lp.commentAtBegining {
 		b.WriteString("(" + lp.comment + ")")
@@ -215,6 +231,10 @@ func parseLocalPart(lp string) (*localPart, error) {
 	if commentStart == -1 && commentEnd > -1 {
 		return nil, fmt.Errorf(") is only valid within quoted string or escaped")
 	}
+
+	if commentStart > commentEnd {
+		return nil, fmt.Errorf("invalid email address")
+	}
 	if commentStart == 0 {
 		start = commentEnd + 1
 	}
@@ -226,7 +246,7 @@ func parseLocalPart(lp string) (*localPart, error) {
 		localPartEmail: lp[start:end],
 	}
 	if seeTag {
-		lpResult.tags = strings.Split(lp, "+")[1:]
+		lpResult.tags = getTags(lp[end:])
 	}
 
 	if commentStart > -1 && commentEnd > -1 {
@@ -236,6 +256,41 @@ func parseLocalPart(lp string) (*localPart, error) {
 		}
 	}
 	return lpResult, nil
+}
+
+func getTags(t string) []tag {
+	totalLen := len(t)
+	if totalLen == 0 || t == "+" {
+		return nil
+	}
+	var tags []tag
+	currentTag := tag{
+		emailTags: t,
+		start:     0,
+	}
+	for idx := 0; idx < totalLen; idx++ {
+		c := t[idx]
+		switch c {
+		case '+':
+			if idx == 0 {
+				// it start with +, we skip it
+				currentTag.start = 1
+				continue
+			}
+			currentTag.end = idx
+			tags = append(tags, currentTag)
+			currentTag = tag{
+				emailTags: t,
+				start:     idx + 1,
+			}
+		}
+	}
+	currentTag.end = totalLen
+	if currentTag.start < currentTag.end {
+		// if it is end with tag, then
+		tags = append(tags, currentTag)
+	}
+	return tags
 }
 
 // Equals will parse the given email addresses , and then compare it.
