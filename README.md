@@ -29,7 +29,8 @@ if b {
 
 ### Check whether two mailbox is equal
 
-johnny+1@test.net and johnny+2@test.net are both legitimate emamil address, but they might all end up to johnny@test.net mailbox.  This library provide a method to check whether two email address are semantically equal
+johnny+1@test.net and johnny+2@test.net are both legitimate email address, but they might all end up to johnny@test.net mailbox.  This library provide a method to check whether two email address are semantically equal
+compare two email address disregard comments and tags
 
 ```go
 if emailaddress.Equals("johnny+1@test.net","johnny+2@test.net") {
